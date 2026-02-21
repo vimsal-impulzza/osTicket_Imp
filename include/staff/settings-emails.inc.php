@@ -142,6 +142,31 @@ if(!defined('OSTADMININC') || !$thisstaff || !$thisstaff->isAdmin() || !$config)
             <i class="help-tip icon-question-sign" href="#accept_email_collaborators"></i>
         </tr>
         <tr><th colspan=2><em><strong><?php echo __('Outgoing Email');?></strong>: <?php echo __('Default email only applies to outgoing emails without SMTP setting.');?></em></th></tr>
+        <!-- START CHANGE: API Mail Service Configuration UI **IMPULZZA NETWORKS** -->
+        <tr>
+            <td width="180"><?php echo __('API Mail Service'); ?>:</td>
+            <td>
+                <input type="checkbox" name="api_mail_enabled" <?php echo $config['api_mail_enabled']?'checked="checked"':''; ?>>
+                <?php echo __('Enable API Mail Service (prioritized over SMTP)'); ?>
+                <i class="help-tip icon-question-sign" href="#api_mail_service"></i>
+            </td>
+        </tr>
+        <tr>
+            <td width="180"><?php echo __('API Mail Endpoint'); ?>:</td>
+            <td>
+                <input type="text" size="60" name="api_mail_endpoint" value="<?php echo $config['api_mail_endpoint']; ?>" placeholder="https://your-api-endpoint.com/send-email">
+                &nbsp;<font class="error">&nbsp;<?php echo $errors['api_mail_endpoint']; ?></font>
+                <i class="help-tip icon-question-sign" href="#api_mail_endpoint"></i>
+            </td>
+        </tr>
+        <tr>
+            <td width="180"><?php echo __('API Mail Token'); ?>:</td>
+            <td>
+                <input type="text" size="60" name="api_mail_token" value="<?php echo $config['api_mail_token']; ?>" placeholder="Optional Bearer Token">
+                <i class="help-tip icon-question-sign" href="#api_mail_token"></i>
+            </td>
+        </tr>
+        <!-- END CHANGE: API Mail Service Configuration UI **IMPULZZA NETWORKS** -->
         <tr><td width="180"><?php echo __('Default MTA'); ?>:</td>
             <td>
                 <select name="default_smtp_id">

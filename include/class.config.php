@@ -1,6 +1,6 @@
 <?php
 /*********************************************************************
-    class.config.php
+    class.config.php 
 
     osTicket config info manager.
 
@@ -1562,6 +1562,15 @@ class OsticketConfig extends Config {
         if($vars['admin_email'] && Email::getIdByEmail($vars['admin_email'])) //Make sure admin email is not also a system email.
             $errors['admin_email']=__('Email already setup as system email');
 
+        // Validación del API Mail Endpoint ** IMPULZZA NETWORKS **
+        if(isset($vars['api_mail_enabled']) && $vars['api_mail_enabled']) {
+            if(!trim($vars['api_mail_endpoint']))
+                $errors['api_mail_endpoint']=__('API Mail Endpoint is required when API Mail is enabled');
+            elseif(!filter_var($vars['api_mail_endpoint'], FILTER_VALIDATE_URL))
+                $errors['api_mail_endpoint']=__('Please enter a valid URL for API Mail Endpoint');
+        }
+        // End Validación del API Mail Endpoint ** IMPULZZA NETWORKS **
+
         if(!Validator::process($f,$vars,$errors) || $errors)
             return false;
 
@@ -1580,6 +1589,11 @@ class OsticketConfig extends Config {
             'add_email_collabs'=>isset($vars['add_email_collabs'])?1:0,
             'reply_separator'=>$vars['reply_separator'],
             'email_attachments'=>isset($vars['email_attachments'])?1:0,
+            // API Mail Settings ** IMPULZZA NETWORKS **
+            'api_mail_enabled'=>isset($vars['api_mail_enabled'])?1:0,
+            'api_mail_endpoint'=>$vars['api_mail_endpoint'],
+            'api_mail_token'=>$vars['api_mail_token'],
+            // END API Mail Settings ** IMPULZZA NETWORKS **
          ));
     }
 
