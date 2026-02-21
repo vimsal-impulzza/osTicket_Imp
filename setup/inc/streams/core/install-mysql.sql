@@ -744,6 +744,7 @@ CREATE TABLE `%TABLE_PREFIX%ticket` (
   `est_duedate` datetime default NULL,
   `reopened` datetime default NULL,
   `closed` datetime default NULL,
+  `time_spent` DECIMAL(10,2) DEFAULT 0.00 COMMENT 'Time spent on ticket in hours',
   `lastupdate` datetime default NULL,
   `created` datetime NOT NULL,
   `updated` datetime NOT NULL,
