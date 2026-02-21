@@ -19,6 +19,17 @@ define('THIS_DIR', str_replace('\\', '/', Misc::realpath(dirname(__FILE__))) . '
 
 require_once(INCLUDE_DIR.'mpdf/vendor/autoload.php');
 
+// Directorio temporal para mPDF con permisos garantizados en hosting compartido
+function osticket_mpdf_tempdir() {
+    $dir = ROOT_DIR . 'attachments/mpdf_tmp';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+        // Proteger el directorio con .htaccess
+        @file_put_contents($dir . '/.htaccess', 'Deny from all');
+    }
+    return $dir;
+}
+
 class mPDFWithLocalImages extends Mpdf {
     function WriteHtml($html, $sub = 0, $init = true, $close = true) {
         static $filenumber = 1;
@@ -77,7 +88,7 @@ class Ticket2PDF extends mPDFWithLocalImages
         $this->includenotes = $notes;
         $this->includeevents = $events;
 
-        parent::__construct(['mode' => 'utf-8', 'format' => $psize, 'tempDir'=>sys_get_temp_dir(), 'autoLangToFont' => true, 'autoScriptToLang' => true]);
+        parent::__construct(['mode' => 'utf-8', 'format' => $psize, 'tempDir'=>osticket_mpdf_tempdir(), 'autoLangToFont' => true, 'autoScriptToLang' => true]);
 
         $this->_print();
 	}
@@ -118,7 +129,8 @@ class Task2PDF extends mPDFWithLocalImages {
         $this->task = $task;
         $this->options = $options;
 
-        parent::__construct(['mode' => 'utf-8', 'format' => $this->options['psize'], 'tempDir'=>sys_get_temp_dir(), 'autoLangToFont' => true, 'autoScriptToLang' => true]);
+        parent::__construct(['mode' => 'utf-8', 'format' => $this->options['psize'], 'tempDir'=>osticket_mpdf_tempdir(), 'autoLangToFont' => true, 'autoScriptToLang' => true]);
+        
         $this->_print();
     }
 
