@@ -113,7 +113,7 @@ INSERT INTO `%TABLE_PREFIX%config` (`namespace`, `key`, `value`) VALUES
   ('core', 'admin_email', ''),
   ('core', 'helpdesk_url', ''),
   ('core', 'helpdesk_title', ''),
-  ('core', 'schema_signature', '');
+  ('core', 'schema_signature', ''),
   ('core', 'api_mail_enabled', '0'),
   ('core', 'api_mail_endpoint', ''),
   ('core', 'api_mail_token', '');
