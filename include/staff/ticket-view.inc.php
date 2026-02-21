@@ -252,7 +252,8 @@ if($ticket->isOverdue())
                 } ?>
 
 
-<?php           if ($thisstaff->hasPerm(Email::PERM_BANLIST)) {
+<?php           if ($thisstaff->hasPerm(Email::PERM_BANLIST)
+                    && $role->hasPerm(Ticket::PERM_REPLY)) {
                      if(!$emailBanned) {?>
                         <li><a class="confirm-action" id="ticket-banemail"
                             href="#banemail"><i class="icon-ban-circle"></i> <?php echo sprintf(
@@ -637,6 +638,48 @@ if($ticket->isOverdue())
                     <th nowrap><?php echo __('Last Response');?>:</th>
                     <td><?php echo Format::datetime($ticket->getLastRespDate()); ?></td>
                 </tr>
+                <!-- Time Spent Field ** IMPULZZA NETWORKS ** -->
+                <tr>
+                    <th nowrap><?php echo __('Time Spent');?>:</th>
+                    <td>
+                    <?php
+                         if ($role->hasPerm(Ticket::PERM_EDIT)) { ?>
+                    <span id="time-spent-display">
+                        <?php 
+                        $time_spent = $ticket->getTimeSpent();
+                        if ($time_spent > 0) {
+                            echo sprintf(__('%s hours'), number_format($time_spent, 2));
+                        } else {
+                            echo __('Not set');
+                        }
+                        ?>
+                    </span>
+                    <a class="edit-time-spent" href="#" style="margin-left: 10px;" 
+                       data-placement="bottom" data-toggle="tooltip" 
+                       title="<?php echo __('Edit Time Spent'); ?>">
+                        <i class="icon-edit"></i>
+                    </a>
+                    <span id="time-spent-edit" style="display:none;">
+                        <input type="number" step="0.5" min="0" 
+                               id="time-spent-input" 
+                               value="<?php echo $ticket->getTimeSpent(); ?>" 
+                               style="width: 80px;" /> <?php echo __('hours'); ?>
+                        <button type="button" id="save-time-spent" class="button"><?php echo __('Save'); ?></button>
+                        <button type="button" id="cancel-time-spent" class="button"><?php echo __('Cancel'); ?></button>
+                    </span>
+                      <?php
+                         } else {
+                            $time_spent = $ticket->getTimeSpent();
+                            if ($time_spent > 0) {
+                                echo sprintf(__('%s hours'), number_format($time_spent, 2));
+                            } else {
+                                echo __('Not set');
+                            }
+                        }
+                    ?>
+                    </td>
+                </tr>
+                <!-- End Time Spent Field ** IMPULZZA NETWORKS ** -->
             </table>
         </td>
     </tr>
@@ -1437,6 +1480,48 @@ $(function() {
    }).on('select2:opening select2:closing', function(e) {
     $(this).parent().find('.select2-search__field').prop('disabled', true);
    });
+
+  // Time Spent Edit Functionality ** IMPULZZA NETWORKS **
+  $('.edit-time-spent').click(function(e) {
+    e.preventDefault();
+    $('#time-spent-display').hide();
+    $(this).hide();
+    $('#time-spent-edit').show();
+    $('#time-spent-input').focus();
+  });
+
+  $('#cancel-time-spent').click(function() {
+    $('#time-spent-edit').hide();
+    $('#time-spent-display').show();
+    $('.edit-time-spent').show();
+  });
+
+  $('#save-time-spent').click(function() {
+    var hours = parseFloat($('#time-spent-input').val()) || 0;
+    $.ajax({
+      url: 'ajax.php/tickets/<?php echo $ticket->getId(); ?>/time-spent',
+      type: 'POST',
+      data: {
+        time_spent: hours,
+        csrf_token: $('input[name=csrf_token]').val()
+      },
+      success: function(response) {
+        var display = hours > 0 ? hours.toFixed(2) + ' <?php echo __("hours"); ?>' : '<?php echo __("Not set"); ?>';
+        $('#time-spent-display').html(display);
+        $('#time-spent-edit').hide();
+        $('#time-spent-display').show();
+        $('.edit-time-spent').show();
+        // Show success message
+        if (typeof showAlert === 'function') {
+          showAlert('<?php echo __("Time spent updated successfully"); ?>');
+        }
+      },
+      error: function() {
+        alert('<?php echo __("Error updating time spent"); ?>');
+      }
+    });
+  });
+  // End Time Spent Edit Functionality ** IMPULZZA NETWORKS **
 });
 function saveDraft() {
     redactor = $('#response').redactor('plugin.draft');
