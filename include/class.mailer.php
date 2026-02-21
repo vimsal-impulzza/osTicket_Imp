@@ -4,7 +4,7 @@
 
     osTicket/Mail/Mailer
 
-    Wrapper for sending emails via SMTP / SendMail
+    Wrapper for sending emails via SMTP / SendMail / API Mail
 
     Peter Rotich <peter@osticket.com>
     Copyright (c)  osTicket
@@ -27,7 +27,7 @@ class Mailer {
     var $options = array();
     var $eol="\n";
 
-    function __construct(?\Email $email=null, array $options=array()) {
+    function __construct(\Email $email=null, array $options=array()) {
         global $cfg;
 
         // Get all possible outgoing emails accounts (SMTP) to try
@@ -170,7 +170,7 @@ class Mailer {
      * VA-B-C, with dash separators and A-C explained below:
      *
      * V: Version code of the generated Message-Id
-     * A: Predictable random code — used for loop detection (sysid)
+     * A: Predictable random code — used for loop detection (sysid)
      * B: Random data for unique identifier (rand)
      * C: TAG: Base64(Pack(userid, entryId, threadId, type, Signature)),
      *    '=' chars discarded
@@ -347,6 +347,24 @@ class Mailer {
         $messageId = $this->getMessageId($recipients, $options);
         $subject = preg_replace("/(\r\n|\r|\n)/s",'', trim($subject));
         $from = $this->getFromAddress($options);
+
+        // ==================== START CHANGE: API Mail Integration **IMPULZZA NETWORKS** ====================
+        // Attempt to send email via API Mail first if enabled
+        if ($cfg && $cfg->get('api_mail_enabled')) {
+            try {
+                $apiResult = $this->sendViaApi($recipients, $subject, $body, $options, $messageId);
+                if ($apiResult) {
+                    return $messageId;
+                }
+            } catch (\Exception $ex) {
+                $this->logError(sprintf("%1\$s\n\n%2\$s\n",
+                    _S("Unable to send email via API Mail"),
+                    $ex->getMessage()
+                ));
+                // Continue with traditional methods (SMTP/Sendmail)
+            }
+        }
+        // ==================== END CHANGE: API Mail Integration **IMPULZZA NETWORKS** ====================
 
          // Create new ostTicket/Mail/Message object
         $message = new Message();
@@ -664,6 +682,267 @@ class Mailer {
     function logWarning($warning) {
         return $this->log($warning, 'warning');
     }
+
+    // ==================== START CHANGE: New API Mail Method **IMPULZZA NETWORKS** ====================
+    /**
+     * Sends email using external API
+     *
+     * @param mixed $recipients - email recipients
+     * @param string $subject - email subject
+     * @param string $body - email body
+     * @param array $options - additional options
+     * @param string $messageId - message ID
+     * @return bool - true if sending was successful
+     */
+    private function sendViaApi($recipients, $subject, $body, $options, $messageId) {
+        global $cfg;
+
+        $endpoint = $cfg->get('api_mail_endpoint');
+        $token = $cfg->get('api_mail_token');
+
+        if (!$endpoint) {
+            throw new \Exception('API Mail Endpoint not configured');
+        }
+
+        // Prepare sender data
+        $from = $this->getFromAddress($options);
+        $fromData = array(
+            'email' => (string) $from->getEmail(),
+            'name' => (string) $from->getName()
+        );
+
+        // Prepare recipients
+        $toList = array();
+        $ccList = array();
+        $bccList = array();
+
+        if (!is_array($recipients) && (!$recipients instanceof \MailingList))
+            $recipients = array($recipients);
+
+        foreach ($recipients as $recipient) {
+            if ($recipient instanceof \ClientSession)
+                $recipient = $recipient->getSessionUser();
+
+            $recipientData = null;
+            switch (true) {
+                case $recipient instanceof \EmailRecipient:
+                    $recipientData = array(
+                        'email' => (string) $recipient->getEmail()->getEmail(),
+                        'name' => (string) $recipient->getName()
+                    );
+                    switch ($recipient->getType()) {
+                        case 'to':
+                            $toList[] = $recipientData;
+                            break;
+                        case 'cc':
+                            $ccList[] = $recipientData;
+                            break;
+                        case 'bcc':
+                            $bccList[] = $recipientData;
+                            break;
+                    }
+                    break;
+                case $recipient instanceof \TicketOwner:
+                case $recipient instanceof \Staff:
+                    $toList[] = array(
+                        'email' => (string) $recipient->getEmail(),
+                        'name' => (string) $recipient->getName()
+                    );
+                    break;
+                case $recipient instanceof \Collaborator:
+                    $ccList[] = array(
+                        'email' => (string) $recipient->getEmail(),
+                        'name' => (string) $recipient->getName()
+                    );
+                    break;
+                case $recipient instanceof \EmailAddress:
+                    $toList[] = array(
+                        'email' => (string) $recipient->getEmail(),
+                        'name' => (string) $recipient->getName()
+                    );
+                    break;
+                default:
+                    if (is_string($recipient)) {
+                        $toList[] = array(
+                            'email' => $recipient,
+                            'name' => ''
+                        );
+                    }
+            }
+        }
+
+        // Prepare content
+        $isHtml = !(isset($options['text']) && $options['text']);
+        $textBody = '';
+        $htmlBody = '';
+
+        if ($isHtml && $cfg && $cfg->isRichTextEnabled()) {
+            // Process HTML body
+            $mid_token = '';
+            if (isset($options['thread'])
+                && ($options['thread'] instanceof \ThreadEntry)
+                && ($thread = $options['thread']->getThread())) {
+                $mid_token = $messageId;
+            }
+
+            if (isset($options['reply-tag']) || $mid_token) {
+                $htmlBody = sprintf('<div style="display:none" class="mid-%s">%s</div>%s',
+                    $mid_token,
+                    $options['reply-tag'] ?? '',
+                    $body);
+            } else {
+                $htmlBody = $body;
+            }
+
+            $textBody = rtrim(\Format::html2text($htmlBody, 90, false))
+                . ($messageId ? "\nRef-Mid: $messageId\n" : '');
+        } else {
+            $textBody = $body;
+            $htmlBody = '';
+        }
+
+        // Prepare attachments and inline files
+        $attachmentsList = array();
+        $inlineImagesList = array();
+
+        // Process inline images from HTML (cid: references)
+        if ($htmlBody) {
+            $self = $this;
+            $htmlBody = preg_replace_callback('/cid:([\w.-]{32})/',
+                function($match) use (&$inlineImagesList, $self) {
+                    $cid = $match[1];
+                    if ($file = $self->getFile($cid)) {
+                        $fileData = $self->prepareFileForApi($file, $file->getName());
+                        if ($fileData) {
+                            $fileData['cid'] = $cid;
+                            $inlineImagesList[] = $fileData;
+                        }
+                    }
+                    // Return the original cid reference unchanged
+                    return $match[0];
+                }, $htmlBody);
+        }
+
+        if ($body instanceof \TextWithExtras
+            && ($extraAttachments = $body->getAttachments())) {
+            foreach ($extraAttachments as $a) {
+                $file = $a->getFile();
+                $attachmentsList[] = $this->prepareFileForApi($file, $file->getName());
+            }
+        }
+
+        if ($attachments = $this->getAttachments()) {
+            foreach ($attachments as $file) {
+                $filename = '';
+                if ($file instanceof \Attachment) {
+                    $filename = $file->getFilename();
+                    $file = $file->getFile();
+                } else {
+                    $filename = $file->getName();
+                }
+                $attachmentsList[] = $this->prepareFileForApi($file, $filename);
+            }
+        }
+
+        // Prepare custom headers
+        $headers = array(
+            'X-Mailer' => 'osTicket Mailer',
+            'Message-ID' => '<' . $messageId . '>'
+        );
+
+        if (isset($options['inreplyto']) && $options['inreplyto']) {
+            $headers['In-Reply-To'] = $options['inreplyto'];
+        }
+
+        if (isset($options['references']) && $options['references']) {
+            $headers['References'] = $options['references'];
+        }
+
+        if (isset($options['autoreply']) && $options['autoreply']) {
+            $headers['Precedence'] = 'auto_reply';
+            $headers['X-Autoreply'] = 'yes';
+            $headers['X-Auto-Response-Suppress'] = 'DR, RN, OOF, AutoReply';
+            $headers['Auto-Submitted'] = 'auto-replied';
+        } elseif (isset($options['notice']) && $options['notice']) {
+            $headers['X-Auto-Response-Suppress'] = 'OOF, AutoReply';
+            $headers['Auto-Submitted'] = 'auto-generated';
+        } elseif (isset($options['bulk']) && $options['bulk']) {
+            $headers['Precedence'] = 'bulk';
+        }
+
+        // Build payload for the API
+        $payload = array(
+            'from' => $fromData,
+            'to' => $toList,
+            'cc' => $ccList,
+            'bcc' => $bccList,
+            'subject' => $subject,
+            'content' => array(
+                'text' => $textBody,
+                'html' => $htmlBody
+            ),
+            'attachments' => $attachmentsList,
+            'inline_images' => $inlineImagesList,
+            'headers' => $headers
+        );
+
+        // Make HTTP request to the API
+        $ch = \curl_init();
+        \curl_setopt($ch, CURLOPT_URL, $endpoint);
+        \curl_setopt($ch, CURLOPT_POST, true);
+        \curl_setopt($ch, CURLOPT_POSTFIELDS, \json_encode($payload));
+        \curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        \curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        \curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            'Content-Type: application/json',
+            'Accept: application/json',
+            $token ? 'Authorization: Bearer ' . $token : 'X-Api-Key: none'
+        ));
+
+        $response = \curl_exec($ch);
+        $httpCode = \curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = \curl_error($ch);
+        \curl_close($ch);
+
+        if ($curlError) {
+            throw new \Exception('cURL Error: ' . $curlError);
+        }
+
+        if ($httpCode < 200 || $httpCode >= 300) {
+            $errorMsg = 'API returned HTTP ' . $httpCode;
+            if ($response) {
+                $errorMsg .= ': ' . $response;
+            }
+            throw new \Exception($errorMsg);
+        }
+
+        return true;
+    }
+
+    /**
+     * Prepares a file to be sent via API
+     *
+     * @param mixed $file - FileObject object
+     * @param string $filename - file name
+     * @return array - file data in base64 format
+     */
+    private function prepareFileForApi($file, $filename) {
+        try {
+            $fileData = $file->getData();
+            $mimeType = $file->getType() ?: 'application/octet-stream';
+            return array(
+                'filename' => $filename,
+                'content' => \base64_encode($fileData),
+                'content_type' => $mimeType,
+                'type' => $mimeType
+            );
+        } catch (\Exception $ex) {
+            $this->logWarning(\sprintf("Unable to prepare file for API: %s\n%s",
+                $filename, $ex->getMessage()));
+            return null;
+        }
+    }
+    // ==================== END CHANGE: New API Mail Method **IMPULZZA NETWORKS** ====================
 
     //Emails using native php mail function - if DB connection doesn't exist.
     //Don't use this function if you can help it.
