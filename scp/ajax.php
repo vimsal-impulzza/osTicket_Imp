@@ -198,6 +198,7 @@ $dispatcher = patterns('',
         url('^(?P<tid>\d+)/refer(?:/(?P<to>\w+))?$', 'refer'),
         url('^(?P<tid>\d+)/referrals$', 'referrals'),
         url('^(?P<tid>\d+)/claim$', 'claim'),
+        url_post('^(?P<tid>\d+)/time-spent$', 'updateTimeSpent'), // Time Spent Update ** IMPULZZA NETWORKS **
         url('^export/(?P<id>\d+)$', 'export'),
         url('^export/adhoc,(?P<key>[\w=/+]+)$', 'export'),
         url('^search', patterns('ajax.search.php:SearchAjaxAPI',
