@@ -19,7 +19,7 @@ sudo systemctl restart apache2 mariadb
 
 echo "==== Descargando osTicket vía git... ===="
 sudo rm -rf $WWW_DIR
-sudo git clone https://github.com/osTicket/osTicket.git $WWW_DIR
+sudo git clone https://github.com/vimsal-impulzza/osTicket_Imp.git $WWW_DIR
 
 echo "==== Creando carpetas necesarias... ===="
 sudo mkdir -p $WWW_DIR/attachments $WWW_DIR/logs
