@@ -20,6 +20,7 @@ sudo systemctl restart apache2 mariadb
 echo "==== Descargando osTicket vía git... ===="
 sudo rm -rf $WWW_DIR
 sudo git clone https://github.com/vimsal-impulzza/osTicket_Imp.git $WWW_DIR
+sudo git clone --branch dev_Impulzza https://github.com/vimsal-impulzza/osTicket_Imp.git $WWW_DIR
 
 echo "==== Creando carpetas necesarias... ===="
 sudo mkdir -p $WWW_DIR/attachments $WWW_DIR/logs
@@ -57,5 +58,6 @@ echo "==== Acceder a http://$IP/osticket/ para terminar la instalación en web =
 echo "==== Cuando el instalador termine, se recmienda elimina la carpeta setup y cambia permisos de ost-config.php: ===="
 echo "sudo rm -rf $WWW_DIR/setup"
 echo "sudo chmod 0644 $WWW_DIR/include/ost-config.php"
+echo "Cambiar la fimrma en include\upgrader\streams\core.sig"
 echo
 echo "*** ¡No olvides estos pasos al terminar la instalación desde el navegador! ***"
