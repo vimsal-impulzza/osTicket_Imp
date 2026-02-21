@@ -796,6 +796,38 @@ class TicketsAjaxAPI extends AjaxController {
         include STAFFINC_DIR . 'templates/field-view.tmpl.php';
     }
 
+    // Update Time Spent on ticket ** IMPULZZA NETWORKS **
+    function updateTimeSpent($ticket_id) {
+        global $thisstaff;
+
+        if (!$thisstaff)
+            Http::response(403, 'Login required');
+        elseif (!($ticket = Ticket::lookup($ticket_id)))
+            Http::response(404, 'No such ticket');
+        elseif (!$ticket->checkStaffPerm($thisstaff, Ticket::PERM_EDIT))
+            Http::response(403, 'Access Denied');
+        elseif (!isset($_POST['time_spent']))
+            Http::response(422, 'Time spent value required');
+
+        $time_spent = floatval($_POST['time_spent']);
+        if ($time_spent < 0)
+            $time_spent = 0;
+
+        if ($ticket->setTimeSpent($time_spent)) {
+            Http::response(200, $this->json_encode(array(
+                'success' => true,
+                'time_spent' => $time_spent,
+                'message' => __('Time spent updated successfully')
+            )));
+        } else {
+            Http::response(500, $this->json_encode(array(
+                'success' => false,
+                'message' => __('Unable to update time spent')
+            )));
+        }
+    }
+    // End Update Time Spent ** IMPULZZA NETWORKS **
+
     function assign($tid, $target=null) {
         global $thisstaff;
 
@@ -1447,6 +1479,15 @@ class TicketsAjaxAPI extends AjaxController {
         $state = strtolower($status->getState());
 
         if (!$errors && $ticket->setStatus($status, $_REQUEST['comments'], $errors)) {
+            // Save time spent if provided when closing ** IMPULZZA NETWORKS **
+            if ($state == 'closed' && isset($_REQUEST['time_spent']) && $_REQUEST['time_spent']) {
+                $time_spent = floatval($_REQUEST['time_spent']);
+                if ($time_spent > 0) {
+                    $ticket->setTimeSpent($time_spent);
+                }
+            }
+            // End save time spent ** IMPULZZA NETWORKS **
+
             $failures = array();
             // Set children statuses (if applicable)
             if ($_REQUEST['children']) {

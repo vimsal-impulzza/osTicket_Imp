@@ -113,7 +113,7 @@ INSERT INTO `%TABLE_PREFIX%config` (`namespace`, `key`, `value`) VALUES
   ('core', 'admin_email', ''),
   ('core', 'helpdesk_url', ''),
   ('core', 'helpdesk_title', ''),
-  ('core', 'schema_signature', '');
+  ('core', 'schema_signature', ''),
   ('core', 'api_mail_enabled', '0'),
   ('core', 'api_mail_endpoint', ''),
   ('core', 'api_mail_token', '');
@@ -744,6 +744,7 @@ CREATE TABLE `%TABLE_PREFIX%ticket` (
   `est_duedate` datetime default NULL,
   `reopened` datetime default NULL,
   `closed` datetime default NULL,
+  `time_spent` DECIMAL(10,2) DEFAULT 0.00 COMMENT 'Time spent on ticket in hours',
   `lastupdate` datetime default NULL,
   `created` datetime NOT NULL,
   `updated` datetime NOT NULL,
