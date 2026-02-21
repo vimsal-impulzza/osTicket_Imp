@@ -386,6 +386,23 @@ implements RestrictedAccess, Threadable, Searchable {
         return null !== $this->getLock();
     }
 
+    // Get time spent on ticket in hours ** IMPULZZA NETWORKS **
+    function getTimeSpent() {
+        return $this->time_spent ?: 0;
+    }
+    // End Get time spent ** IMPULZZA NETWORKS **
+
+    // Set time spent on ticket in hours ** IMPULZZA NETWORKS **
+    function setTimeSpent($hours) {
+        $hours = floatval($hours);
+        if ($hours < 0) {
+            $hours = 0;
+        }
+        $this->time_spent = $hours;
+        return $this->save();
+    }
+    // End Set time spent ** IMPULZZA NETWORKS **
+
     function getRole($staff) {
         if (!$staff instanceof Staff)
             return null;
