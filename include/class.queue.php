@@ -681,7 +681,42 @@ class CustomQueue extends VerySimpleModel {
             return $columns;
         }
         elseif (count($this->columns)) {
-            return $this->columns;
+            // Inject Help Topic column if not already present (no DB write)
+            foreach ($this->columns as $c) {
+                if ($c->get('primary') === 'topic_id')
+                    return $this->columns;
+            }
+            $extra = array();
+            $injected = false;
+            foreach ($this->columns as $c) {
+                $extra[] = $c;
+                if (!$injected && $c->get('primary') === 'cdata__priority') {
+                    $col = QueueColumn::placeholder(array(
+                        "id" => 15,
+                        "queue_id" => $this->id,
+                        "heading" => __("Help Topic"),
+                        "primary" => 'topic_id',
+                        "width" => 130,
+                        "bits" => QueueColumn::FLAG_SORTABLE,
+                    ));
+                    $col->queue = $this;
+                    $extra[] = $col;
+                    $injected = true;
+                }
+            }
+            if (!$injected) {
+                $col = QueueColumn::placeholder(array(
+                    "id" => 15,
+                    "queue_id" => $this->id,
+                    "heading" => __("Help Topic"),
+                    "primary" => 'topic_id',
+                    "width" => 130,
+                    "bits" => QueueColumn::FLAG_SORTABLE,
+                ));
+                $col->queue = $this;
+                $extra[] = $col;
+            }
+            return $extra;
         }
 
         // Use the columns of the "Open" queue as a default template
@@ -732,6 +767,13 @@ class CustomQueue extends VerySimpleModel {
                 "heading" => __("Priority"),
                 "primary" => 'cdata__priority',
                 "width" => 120,
+                "bits" => QueueColumn::FLAG_SORTABLE,
+            )),
+            QueueColumn::placeholder(array(
+                "id" => 6,
+                "heading" => __("Help Topic"),
+                "primary" => 'topic_id',
+                "width" => 130,
                 "bits" => QueueColumn::FLAG_SORTABLE,
             )),
             QueueColumn::placeholder(array(
