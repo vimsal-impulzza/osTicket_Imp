@@ -102,6 +102,9 @@ CREATE TABLE `%TABLE_PREFIX%config` (
   `key` varchar(64) NOT NULL,
   `value` text NOT NULL,
   `updated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `api_mail_enabled` TINYINT(1) NOT NULL DEFAULT 0,
+  `api_mail_endpoint` VARCHAR(255) DEFAULT NULL,
+  `api_mail_token` VARCHAR(255) DEFAULT NULL,
   PRIMARY KEY  (`id`),
   UNIQUE KEY (`namespace`, `key`)
 ) DEFAULT CHARSET=utf8;
@@ -111,6 +114,10 @@ INSERT INTO `%TABLE_PREFIX%config` (`namespace`, `key`, `value`) VALUES
   ('core', 'helpdesk_url', ''),
   ('core', 'helpdesk_title', ''),
   ('core', 'schema_signature', '');
+  ('core', 'api_mail_enabled', '0'),
+  ('core', 'api_mail_endpoint', ''),
+  ('core', 'api_mail_token', '');
+
 
 DROP TABLE IF EXISTS `%TABLE_PREFIX%form`;
 CREATE TABLE `%TABLE_PREFIX%form` (
