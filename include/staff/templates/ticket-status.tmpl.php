@@ -101,6 +101,21 @@ $action = $info['action'] ?: ('#tickets/status/'. $state);
                 </tr>
             </tbody>
            <?php } ?>
+           <?php // Time Spent Field when closing ticket ** IMPULZZA NETWORKS ** ?>
+           <?php if (strcasecmp($state, 'closed') == 0) { ?>
+            <tbody>
+                <tr>
+                    <td>
+                        <strong><?php echo __('Time Spent'); ?>:&nbsp;</strong>
+                        <input type="number" step="0.5" min="0" name="time_spent"
+                               id="time_spent" value="<?php echo isset($info['time_spent']) ? $info['time_spent'] : ''; ?>"
+                               style="width: 80px;" /> <?php echo __('hours'); ?>
+                        <span class="faded"><?php echo __('(Optional: Time invested in the ticket)'); ?></span>
+                    </td>
+                </tr>
+            </tbody>
+           <?php } ?>
+           <?php // End Time Spent Field ** IMPULZZA NETWORKS ** ?>
         </table>
         <hr>
         <p class="full-width">
