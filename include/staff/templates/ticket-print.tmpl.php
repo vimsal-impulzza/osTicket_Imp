@@ -189,6 +189,14 @@ img.avatar {
     <th><?php echo __('Last Message'); ?></th>
     <td><?php echo Format::datetime($ticket->getLastMessageDate()); ?></td>
 </tr>
+<!-- Time Spent Row ** IMPULZZA NETWORKS ** -->
+<?php if ($ticket->getTimeSpent() > 0) { ?>
+<tr>
+    <th><?php echo __('Time Spent'); ?></th>
+    <td colspan="3"><?php echo sprintf(__('%s hours'), number_format($ticket->getTimeSpent(), 2)); ?></td>
+</tr>
+<?php } ?>
+<!-- End Time Spent Row ** IMPULZZA NETWORKS ** -->
 </tbody>
 </table>
 
