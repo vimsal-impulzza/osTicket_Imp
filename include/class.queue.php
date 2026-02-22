@@ -616,6 +616,7 @@ class CustomQueue extends VerySimpleModel {
                 'reopen_count' =>   __('Reopen Count'),
                 'attachment_count' => __('Attachment Count'),
                 'task_count' => __('Task Count'),
+                'time_spent' => __('Time Spent (hrs)'),
                 ) + $cdata;
 
         return $fields;
@@ -909,6 +910,10 @@ class CustomQueue extends VerySimpleModel {
 
         // Distinct ticket_id to avoid duplicate results
         $query->distinct('ticket_id');
+
+        // Filter by selected ticket IDs if provided ** IMPULZZA NETWORKS **
+        if (!empty($options['tids']))
+            $query->filter(array('ticket_id__in' => $options['tids']));
 
         // Render Util
         $render = function ($row) use($columns) {
