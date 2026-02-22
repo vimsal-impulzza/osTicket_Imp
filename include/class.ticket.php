@@ -2407,6 +2407,11 @@ implements RestrictedAccess, Threadable, Searchable {
                 'label' => __('IP Address'),
                 'configuration' => array('validator' => 'ip'),
             )),
+            // Time Spent field ** IMPULZZA NETWORKS **
+            'time_spent' => new TextboxField(array(
+                'label' => __('Time Spent (hrs)'),
+                'configuration' => array('validator' => 'number'),
+            )),
         );
         $tform = TicketForm::getInstance();
         foreach ($tform->getFields() as $F) {
@@ -3592,7 +3597,6 @@ implements RestrictedAccess, Threadable, Searchable {
     // Print ticket... export the ticket thread as PDF.
     function pdfExport($psize='Letter', $notes=false, $events=false) {
         global $thisstaff;
-
         require_once(INCLUDE_DIR.'class.pdf.php');
         if (!is_string($psize)) {
             if ($_SESSION['PAPER_SIZE'])
@@ -3601,12 +3605,11 @@ implements RestrictedAccess, Threadable, Searchable {
                 $psize = 'Letter';
         }
 
-        $pdf = new Ticket2PDF($this, $psize, $notes, $events);
-        $name = 'Ticket-'.$this->getNumber().'.pdf';
-        Http::download($name, 'application/pdf', $pdf->output($name, 'S'));
-        //Remember what the user selected - for autoselect on the next print.
-        $_SESSION['PAPER_SIZE'] = $psize;
-        exit;
+    $pdf = new Ticket2PDF($this, $psize, $notes, $events);
+    $name = 'Ticket-'.$this->getNumber().'.pdf';
+    Http::download($name, 'application/pdf', $pdf->output($name, 'S'));
+    //Remember what the user selected - for autoselect on the next print.
+    $_SESSION['PAPER_SIZE'] = $psize;        exit;
     }
 
     function zipExport($notes=true, $tasks=false) {
