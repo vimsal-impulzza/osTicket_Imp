@@ -154,11 +154,38 @@ name="queue-export" id="queue-export">
        $('span#fields-count', f).html(count);
      });
 
-   $('#queue-export').on('submit', function() {
-       var $btn = $('#export-submit-btn');
-       if ($btn.prop('disabled')) return false; // evitar doble clic
-       $btn.prop('disabled', true).val('<?php echo __('Exportando...'); ?>');
-       $('#export-loading').show();
+   // In cPanel, ack() cannot flush mid-execution so the server takes the full
+   // export duration before responding. $.dialog handles the AJAX correctly but
+   // the form stays visible the whole time. We use setTimeout(0) to replace the
+   // visual content AFTER $.dialog has captured the submit and started the AJAX,
+   // without interfering with it. ** IMPULZZA NETWORKS **
+   $(document).off('submit.exportform').on('submit.exportform', '#queue-export', function() {
+       var $popup = $('.dialog#popup');
+       setTimeout(function() {
+           // Only replace if the body still has the form (not already changed by $.dialog)
+           if ($('#queue-export', $popup).length) {
+               $('div.body', $popup).html(
+                   '<div style="display:block; margin:15px 5px;">'
+                   + '<div><h3 style="color:#000;">'
+                   + '<i class="icon-spinner icon-spin icon-2x"></i>&nbsp;&nbsp;'
+                   + '<?php echo __('Please wait while we generate the export'); ?>'
+                   + '</h3></div><br>'
+                   + '<div style="margin-top:10px;">'
+                   + '<?php echo addslashes(sprintf(__("We know you're busy, you can close this popup and the export will be sent to %s"), Format::htmlchars($thisstaff->getEmail()))); ?>'
+                   + '</div>'
+                   + '<hr><p class="full-width"><span class="buttons pull-right">'
+                   + '<input type="button" class="close" value="<?php echo __('Yes, Email Me'); ?>">'
+                   + '</span></p></div>'
+               );
+           }
+       }, 50);
+   });
+
+   // Prevent double-submit via data flag. ** IMPULZZA NETWORKS **
+   $(document).off('click.exportbtn').on('click.exportbtn', '#export-submit-btn', function() {
+       var $btn = $(this);
+       if ($btn.data('working')) { return false; }
+       $btn.data('working', true);
    });
 
    $(document).on('click', 'input#reset', function(e) {
