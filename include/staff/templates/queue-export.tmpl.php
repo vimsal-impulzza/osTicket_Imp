@@ -22,6 +22,11 @@ if (isset($cache['fields']) && $fields)
 $action = isset($info['action'])
       ? $info['action']
       : '#tickets/export/'.$queue->getId();
+
+// Selected ticket IDs (from GET when opening dialog)
+$selected_tids = array();
+if (isset($_GET['tids']) && is_array($_GET['tids']))
+    $selected_tids = array_filter(array_map('intval', $_GET['tids']));
 ?>
 <div id="tickets-export">
 <h3 class="drag-handle"><?php echo Format::htmlchars($qname); ?></h3>
@@ -35,6 +40,20 @@ Format::htmlchars($errors['err']); ?></div>
 } ?>
 <form action="<?php echo $action; ?>" method="post"
 name="queue-export" id="queue-export">
+  <?php if (!empty($selected_tids)) { ?>
+  <div style="padding:6px 10px; background:#e8f4e8; border:1px solid #5cb85c; margin-bottom:8px; border-radius:3px; font-size:12px;">
+    <i class="icon-filter" style="color:#3c763d;"></i>&nbsp;
+    <strong style="color:#3c763d;"><?php echo sprintf(__('Exportando %d ticket(s) seleccionado(s)'), count($selected_tids)); ?></strong>
+    <?php foreach ($selected_tids as $tid) { ?>
+    <input type="hidden" name="tids[]" value="<?php echo (int)$tid; ?>">
+    <?php } ?>
+  </div>
+  <?php } else { ?>
+  <div style="padding:6px 10px; background:#f5f5f5; border:1px solid #ddd; margin-bottom:8px; border-radius:3px; font-size:12px; color:#777;">
+    <i class="icon-list"></i>&nbsp;
+    <?php echo __('Exportando todos los tickets de esta cola'); ?>
+  </div>
+  <?php } ?>
   <div style="overflow-y: auto; height:400px; margin-bottom:5px;">
   <table class="table">
       <tbody>
@@ -88,10 +107,14 @@ name="queue-export" id="queue-export">
         value="<?php echo __('Cancel'); ?>">
     </span>
     <span class="buttons pull-right">
-        <input type="submit" value="<?php
-        echo __('Export'); ?>">
+        <input type="submit" id="export-submit-btn" value="<?php echo __('Export'); ?>">
     </span>
    </p>
+   <div id="export-loading" style="display:none; padding:8px 10px; background:#fff3cd; border:1px solid #ffc107; border-radius:3px; margin-top:5px; text-align:center;">
+     <i class="icon-spinner icon-spin"></i>&nbsp;
+     <strong><?php echo __('Generando exportacion, por favor espere...'); ?></strong>&nbsp;
+     <span class="faded"><?php echo __('No cierre esta ventana.'); ?></span>
+   </div>
 </form>
 </div>
 <div class="clear"></div>
@@ -130,6 +153,13 @@ name="queue-export" id="queue-export">
        $('div#save-changes', f).fadeIn();
        $('span#fields-count', f).html(count);
      });
+
+   $('#queue-export').on('submit', function() {
+       var $btn = $('#export-submit-btn');
+       if ($btn.prop('disabled')) return false; // evitar doble clic
+       $btn.prop('disabled', true).val('<?php echo __('Exportando...'); ?>');
+       $('#export-loading').show();
+   });
 
    $(document).on('click', 'input#reset', function(e) {
         var f = $(this).closest('form');
