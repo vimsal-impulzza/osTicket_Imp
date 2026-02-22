@@ -2063,6 +2063,10 @@ class TicketsAjaxAPI extends AjaxController {
             $_SESSION['Export:Q'.$id]['fields'] = $_POST['fields'];
             $_SESSION['Export:Q'.$id]['filename'] = $_POST['filename'];
             $_SESSION['Export:Q'.$id]['delimiter'] = $_POST['csv-delimiter'];
+            // Selected ticket IDs (only export selected, if any)
+            $tids = array();
+            if (isset($_POST['tids']) && is_array($_POST['tids']))
+                $tids = array_values(array_filter(array_map('intval', $_POST['tids'])));
             // Save fields selection if requested
             if ($queue->isSaved() && isset($_POST['save-changes']))
                $queue->updateExports(array_flip($_POST['fields']));
@@ -2088,8 +2092,8 @@ class TicketsAjaxAPI extends AjaxController {
                 // Acknowledge the export
                 $exporter->ack();
                 // Phew... now we're free to do the export
-                // Ask the queue to export to the exporter
-                $queue->export($exporter);
+                // Ask the queue to export to the exporter (optionally filtered by selected ticket IDs)
+                $queue->export($exporter, array('tids' => $tids));
                 $exporter->finalize();
                 // Email the export if it exists
                 $exporter->email($thisstaff);
