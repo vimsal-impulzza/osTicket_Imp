@@ -301,10 +301,32 @@ foreach ($tickets as $T) {
         echo __('Page').':'.$pageNav->getPageLinks().'&nbsp;';
         ?>
         <a href="#tickets/export/<?php echo $queue->getId(); ?>"
-        id="queue-export" class="no-pjax export"
+        id="queue-export" class="no-pjax export-tickets"
             ><?php echo __('Export'); ?></a>
         <i class="help-tip icon-question-sign" href="#export"></i>
     </div>
 <?php
     } ?>
 </form>
+<script>
+$(document).on('click', '#queue-export.export-tickets', function(e) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    var tids = [];
+    $('input.ckb:checked').each(function() {
+        tids.push($(this).val());
+    });
+    var href = $(this).attr('href').substr(1);
+    var url = 'ajax.php/' + href;
+    if (tids.length > 0) {
+        url += '?' + tids.map(function(id) { return 'tids[]=' + encodeURIComponent(id); }).join('&');
+    }
+    $.dialog(url, 201, function(xhr) {
+        var resp = $.parseJSON(xhr.responseText);
+        var checker = 'ajax.php/export/' + resp.eid + '/check';
+        $.dialog(checker, 201, function(xhr) {});
+        return false;
+    });
+    return false;
+});
+</script>
