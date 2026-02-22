@@ -15,6 +15,36 @@ if ($errors['err']) {
 $action = $info[':action'] ?: ('#');
 ?>
 <div style="display:block; margin:5px;">
+<?php
+// $exporter may be null when file was already deleted (emailed) in
+// buffered PHP environments. Guard all $exporter usages. ** IMPULZZA NETWORKS **
+$exportInterval = ($exporter && method_exists($exporter,'getInterval'))
+    ? $exporter->getInterval() : 5;
+$exportCheckUrl = ($exporter && method_exists($exporter,'getId'))
+    ? sprintf('ajax.php/export/%s/check', $exporter->getId()) : '';
+?>
+<?php if (!empty($exportEmailed)): ?>
+<div>
+    <h3 style="color:#27ae60;">
+    <i class="icon-envelope icon-2x"></i>&nbsp;&nbsp;
+    <?php echo __('Export Complete'); ?></h3>
+</div>
+<br>
+<div style="margin-top:10px;">
+<?php
+echo sprintf(
+        __("The export has been sent to %s"),
+        $thisstaff->getEmail());
+?>
+</div>
+<hr>
+<p class="full-width">
+    <span class="buttons pull-right">
+        <input type="button" name="close" class="close"
+        value="<?php echo __('Close'); ?>">
+    </span>
+</p>
+<?php else: ?>
 <form method="get" name="export" id="exportchecker"
     action="<?php echo $action; ?>">
     <div>
@@ -38,38 +68,67 @@ $action = $info[':action'] ?: ('#');
         </span>
      </p>
 </form>
-</div>
-<div class="clear"></div>
 <script>
 +function() {
     var $popup = $('.dialog#popup');
     var interval = setInterval(function() {
         $.ajax({
             type: 'POST',
-            url: '<?php echo sprintf('ajax.php/export/%s/check',
-                    $exporter->getId()); ?>',
+            url: '<?php echo $exportCheckUrl; ?>',
             dataType: 'json',
             cache: false,
             success: function (resp, status, xhr)  {
                 if (xhr.status == 201) {
                     clearInterval(interval);
-                    $('a.close', $popup).trigger('click');
-                    var aElement = document.createElement('a');
-                    aElement.href = resp.href;
-                    aElement.target = '_blank';
-                    aElement.download = resp.filename;
-                    aElement.click();
-                    aElement.remove();
+                    if (resp.status === 'emailed') {
+                        // cPanel buffered env: export already emailed+deleted
+                        // ** IMPULZZA NETWORKS **
+                        $('h3', $popup).html(
+                            '<i class="icon-envelope"></i>&nbsp;&nbsp;<?php echo __("Export Complete"); ?>'
+                        ).css('color', '#27ae60');
+                        $('form#exportchecker > div:first', $popup).hide();
+                        $('div[style*="margin-top"]', $popup).html(
+                            '<?php echo sprintf(__("The export has been sent to %s"), $thisstaff->getEmail()); ?>'
+                        );
+                        $('input[name=cancel]', $popup)
+                            .val('<?php echo __("Close"); ?>')
+                            .removeClass('cancel');
+                    } else {
+                        $('a.close', $popup).trigger('click');
+                        var aElement = document.createElement('a');
+                        aElement.href = resp.href;
+                        aElement.target = '_blank';
+                        aElement.download = resp.filename;
+                        aElement.click();
+                        aElement.remove();
+                    }
                 }
             },
             error: function (xhr) {
                 clearInterval(interval);
+                // 404 = export was emailed and file deleted (buffered env)
+                // ** IMPULZZA NETWORKS **
+                if (xhr.status === 404) {
+                    $('h3', $popup).html(
+                        '<i class="icon-envelope"></i>&nbsp;&nbsp;<?php echo __("Export Complete"); ?>'
+                    ).css('color', '#27ae60');
+                    $('form#exportchecker > div:first', $popup).hide();
+                    $('div[style*="margin-top"]', $popup).html(
+                        '<?php echo sprintf(__("The export has been sent to %s"), $thisstaff->getEmail()); ?>'
+                    );
+                    $('input[name=cancel]', $popup)
+                        .val('<?php echo __("Close"); ?>')
+                        .removeClass('cancel');
+                }
             }
         });
-    }, <?php echo ($exporter->getInterval()*1000); ?>);
+    }, <?php echo ($exportInterval * 1000); ?>);
 
     $('input.close, a.close', $popup).on('click', function () {
         clearInterval(interval);
      });
 }();
 </script>
+<?php endif; ?>
+</div>
+<div class="clear"></div>
