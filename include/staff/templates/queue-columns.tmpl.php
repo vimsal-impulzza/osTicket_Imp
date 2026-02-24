@@ -168,9 +168,13 @@ var Q = setInterval(function() {
     return false;
   });
 <?php foreach ($queue->getColumns(true) as $C) {
+  // Use getId() instead of column_id: placeholder QueueColumn objects (injected
+  // when topic_id is missing from the template queue) do not have column_id in
+  // their ORM ht, causing an OrmException. getId() returns QueueColumn.id which
+  // equals QueueColumnGlue.column_id for DB-backed columns. ** IMPULZZA FIX **
   echo sprintf('addColumn(%d, {name: %s, heading: %s, width: %d, trans: %s,
   sortable: %s});',
-    $C->column_id, JsonDataEncoder::encode($C->name),
+    $C->getId(), JsonDataEncoder::encode($C->name),
     JsonDataEncoder::encode($C->heading), $C->width,
     JsonDataEncoder::encode($C->getTranslateTag('heading')),
     $C->isSortable() ? 1 : 0);
