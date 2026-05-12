@@ -612,6 +612,7 @@ class CustomQueue extends VerySimpleModel {
                 'isanswered' =>     __('Answered'),
                 'staff_id' => __('Agent Assigned'),
                 'team_id' =>  __('Team Assigned'),
+                'user__org__name' =>  __('Organization'),
                 'thread_count' =>   __('Thread Count'),
                 'reopen_count' =>   __('Reopen Count'),
                 'attachment_count' => __('Attachment Count'),
