@@ -63,7 +63,7 @@ class Export {
 
         // Reset the $sql query
         $tickets = $sql->models()
-            ->select_related('user', 'user__default_email', 'dept', 'staff',
+            ->select_related('user', 'user__default_email', 'user__org','dept', 'staff',
                 'team', 'staff', 'cdata', 'topic', 'status', 'cdata__:priority')
             ->annotate(array(
                 'collab_count' => TicketThread::objects()
